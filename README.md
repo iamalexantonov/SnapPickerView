@@ -1,3 +1,3 @@
 # SnapPickerView
 
-A description of this package.
+Simple SwiftUI only horizontal scroll picker with snapping.
