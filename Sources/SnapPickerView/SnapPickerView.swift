@@ -1,6 +1,6 @@
 //
 //  SnapPickerView.swift
-//  CafeApp
+//  SnapPickerView
 //
 //  Created by Alexey Antonov on 23/10/21.
 //
@@ -19,6 +19,21 @@ public struct SnapPickerView<Content: View, Item: Hashable>: View {
     private let selectorLineWidth: CGFloat
     private let itemView: (Item)->Content
     
+    /**
+    Initializer of the **SnapPickerView** struct
+     
+    - parameters:
+     - currentItem: should conform to Hashable protocol, use @State or @Binding variables in the view;
+     - items: an array of items of the same type as _currentItem_ wrapped value;
+     - itemWidth: CGFloat value of the width of each item;
+     - itemHeight: CGFloat value of the height of each item;
+     - spacing: CGFloat value of the spacing between items;
+     - componentWidth: CGFloat value of the width of the component;
+     - selectorRadius: CGFloat value of corner radius of the rounded rectangle selection view (optional, default: 20),
+     - selectorColor: Color value of the selection view,
+     - selectionLineWidth: CGFloat value of the stroke width of rounded rectangle selection view (optional, default: 1)
+     - itemView: view of each item that gives current item and builds a SwiftUI view for it
+     */
     public init(currentItem: Binding<Item>, items: [Item], itemWidth: CGFloat, itemHeight: CGFloat, spacing: CGFloat, componentWidth: CGFloat, selectorRadius: CGFloat = 20, selectorColor: Color, selectorLineWidth: CGFloat = 1, @ViewBuilder itemView: @escaping (Item)->Content) {
         _currentItem = currentItem
         self.items = items
