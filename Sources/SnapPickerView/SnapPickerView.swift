@@ -1,3 +1,10 @@
+//
+//  SnapPickerView.swift
+//  CafeApp
+//
+//  Created by Alexey Antonov on 23/10/21.
+//
+
 import SwiftUI
 
 public struct SnapPickerView<Content: View, Item: Hashable>: View {
