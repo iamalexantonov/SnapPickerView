@@ -37,6 +37,7 @@ public struct SnapPickerView<Content: View, Item: Hashable>: View {
             itemView(item)
         }
         .overlay(RoundedRectangle(cornerRadius: selectorRadius).stroke(lineWidth: selectorLineWidth).frame(width: itemWidth + 10, height: itemHeight + 10))
+        .frame(width: componentWidth)
     }
 }
 
@@ -103,7 +104,11 @@ struct SnapScrollView<Content: View, Item: Hashable>: View {
                 var newOffset = max(newValue, calculateScrollOffset(for: items.count - 1))
                 newOffset = min(newOffset, 0)
                 
-                scrollOffset = newOffset
+                if newOffset != scrollOffset {
+                    DispatchQueue.main.async {
+                        scrollOffset = newOffset
+                    }
+                }
             }
     }
     
