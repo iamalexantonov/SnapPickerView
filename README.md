@@ -20,19 +20,19 @@ import SwiftUI
 import SnapPickerView
 
 struct ContentView: View {
-    @State private var currentItem: String
-    let times: ["19:00", "19:30", "20:00", "20:30", "21:00"]
+    @State private var myBeerType: String
+    let beerTypes: ["Lager", "Ale", "IPA", "APA", "Gose"]
 
-    init(times: [String]) {
-        self.times = times
-        self.currentItem = times.first ?? ""
+    init(beerTypes: [String]) {
+        self.beerTypes = beerTypes
+        self.currentItem = beerTypes.first ?? ""
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Selected time: \(currentItem)")
+            Text("Preferred beer type: \(myBeerType)")
                 .padding()
-            SnapPickerView(currentItem: $currentItem, items: times, itemWidth: 80, itemHeight: 20, spacing: 80, componentWidth: UIScreen.main.bounds.width, selectorColor: .green) { item in
+            SnapPickerView(currentItem: $myBeerType, items: beerTypes, itemWidth: 80, itemHeight: 20, spacing: 80, componentWidth: UIScreen.main.bounds.width, selectorColor: .green) { item in
                 Text(item)
             }
         }
