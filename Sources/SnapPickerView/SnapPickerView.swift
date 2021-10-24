@@ -94,7 +94,7 @@ struct SnapScrollView<Content: View, Item: Hashable>: View {
             }
         }
         .offset(x: initialOffset + viewModel.scrollOffset + dragOffset, y: 0)
-            .gesture(DragGesture()
+        .gesture(DragGesture(coordinateSpace: .local)
                 .onChanged({ event in
                     dragOffset = event.translation.width
                 })
