@@ -50,9 +50,10 @@ public struct SnapPickerView<Content: View, Item: Hashable>: View {
     public var body: some View {
         SnapScrollView(currentItemIndex: Binding<Int>(get: { if let currentIndex = items.firstIndex(of: currentItem) { return currentIndex } else { return 0 } }, set: { currentItem = items[$0] }), items: items, itemWidth: itemWidth, itemSpacing: spacing, screenWidth: componentWidth) { item in
             itemView(item)
+                .frame(height: itemHeight)
         }
-        .overlay(RoundedRectangle(cornerRadius: selectorRadius).stroke(lineWidth: selectorLineWidth).frame(width: itemWidth + 10, height: itemHeight + 10))
         .frame(width: componentWidth)
+        .overlay(RoundedRectangle(cornerRadius: selectorRadius).stroke(lineWidth: selectorLineWidth).foregroundColor(selectorColor).frame(width: itemWidth + 15, height: itemHeight + 10))
     }
 }
 
