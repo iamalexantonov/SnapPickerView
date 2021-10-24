@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 public struct SnapPickerView<Content: View, Item: Hashable>: View {
     @Binding var currentItem: Item
@@ -23,7 +24,7 @@ public struct SnapPickerView<Content: View, Item: Hashable>: View {
     Initializer of the **SnapPickerView** struct
      
     - parameters:
-     - currentItem: should conform to Hashable protocol, use @State or @Binding variables in the view;
+     - currentItem: should conform to Hashable protocol, use @State or @Binding variables in the view (**warning**: setter does not work);
      - items: an array of items of the same type as _currentItem_ wrapped value;
      - itemWidth: CGFloat value of the width of each item;
      - itemHeight: CGFloat value of the height of each item;
@@ -48,7 +49,7 @@ public struct SnapPickerView<Content: View, Item: Hashable>: View {
     }
     
     public var body: some View {
-        SnapScrollView(currentItemIndex: Binding<Int>(get: { if let currentIndex = items.firstIndex(of: currentItem) { return currentIndex } else { return 0 } }, set: { currentItem = items[$0] }), items: items, itemWidth: itemWidth, itemSpacing: spacing, screenWidth: componentWidth) { item in
+        SnapScrollView(items: items, itemWidth: itemWidth, itemSpacing: spacing, screenWidth: componentWidth, onItemChanged: { currentItem = items[$0] }) { item in
             itemView(item)
                 .frame(height: itemHeight)
         }
@@ -58,10 +59,9 @@ public struct SnapPickerView<Content: View, Item: Hashable>: View {
 }
 
 struct SnapScrollView<Content: View, Item: Hashable>: View {
-    @State private var scrollOffset: CGFloat = 0
     @State private var dragOffset: CGFloat = 0
-    
-    @Binding var currentItemIndex: Int
+    @StateObject private var viewModel: PickerViewModel<Item>
+
     let items: [Item]
     let itemWidth: CGFloat
     let itemSpacing: CGFloat
@@ -70,8 +70,9 @@ struct SnapScrollView<Content: View, Item: Hashable>: View {
     private let contentWidth: CGFloat
     private let initialOffset: CGFloat
     
-    init(currentItemIndex: Binding<Int>, items: [Item], itemWidth: CGFloat, itemSpacing: CGFloat, screenWidth: CGFloat, @ViewBuilder content: @escaping (Item)->Content) {
-        _currentItemIndex = currentItemIndex
+    init(items: [Item], itemWidth: CGFloat, itemSpacing: CGFloat, screenWidth: CGFloat, onItemChanged: @escaping (Int)->Void, @ViewBuilder content: @escaping (Item)->Content) {
+        _viewModel = StateObject<PickerViewModel>(wrappedValue: PickerViewModel(items: items, itemWidth: itemWidth, itemSpacing: itemSpacing, onItemChanged: onItemChanged))
+        
         self.items = items
         self.itemWidth = itemWidth
         self.itemSpacing = itemSpacing
@@ -87,48 +88,77 @@ struct SnapScrollView<Content: View, Item: Hashable>: View {
                     .frame(width: itemWidth)
                     .onTapGesture {
                         if let index = items.firstIndex(of: item) {
-                            if currentItemIndex != index {
-                                currentItemIndex = Int(index)
-                            }
+                            viewModel.scrollOffset = calculateScrollOffset(for: index)
                         }
                     }
             }
         }
-            .offset(x: initialOffset + scrollOffset + dragOffset, y: 0)
+        .offset(x: initialOffset + viewModel.scrollOffset + dragOffset, y: 0)
             .gesture(DragGesture()
                 .onChanged({ event in
                     dragOffset = event.translation.width
                 })
                 .onEnded({ event in
-                dragOffset = 0
-                if abs(event.translation.width) > itemWidth / 2 + itemSpacing / 2 {
-                    scrollOffset += event.translation.width
-                    var index = Int(round(-scrollOffset / (itemWidth + itemSpacing)))
-                    index = min(index, items.count - 1)
-                    index = max(index, 0)
-                    
-                    currentItemIndex = index
-                }
+                    dragOffset = 0
+                if abs(event.translation.width) > itemWidth / 2 + itemSpacing / 2 && (calculateScrollOffset(for: items.count-1)...0).contains(viewModel.scrollOffset + event.translation.width) {
+                        viewModel.scrollOffset += event.translation.width
+                    }
                 })
             )
-            .onChange(of: currentItemIndex) { newValue in
-                withAnimation {
-                    scrollOffset = calculateScrollOffset(for: newValue)
-                }
-            }
-            .onChange(of: scrollOffset) { newValue in
-                var newOffset = max(newValue, calculateScrollOffset(for: items.count - 1))
-                newOffset = min(newOffset, 0)
-                
-                if newOffset != scrollOffset {
-                    DispatchQueue.main.async {
-                        scrollOffset = newOffset
-                    }
-                }
-            }
     }
     
     private func calculateScrollOffset(for index: Int) -> CGFloat {
         -CGFloat(index) * (itemWidth + itemSpacing)
+    }
+}
+
+class PickerViewModel<T: Hashable>: ObservableObject {
+    let items: [T]
+    let itemWidth: CGFloat
+    let itemSpacing: CGFloat
+    let onItemChanged: (Int)->Void
+    
+    @Published var scrollOffset: CGFloat = 0
+    
+    init(items: [T], itemWidth: CGFloat, itemSpacing: CGFloat, onItemChanged: @escaping (Int)->Void) {
+        self.items = items
+        self.itemWidth = itemWidth
+        self.itemSpacing = itemSpacing
+        self.onItemChanged = onItemChanged
+        
+        $scrollOffset
+            .removeDuplicates()
+            .filter {
+                let maxOffset = -CGFloat(items.count - 1) * (itemWidth + itemSpacing)
+                return (maxOffset...0).contains($0)
+            }
+            .map { offset->Int in
+                var index = Int(round(-offset / (itemWidth + itemSpacing)))
+                index = min(index, items.count - 1)
+                index = max(index, 0)
+                
+                return index
+            }
+            .handleEvents(receiveOutput: { [weak self] index in
+                self?.onItemChanged(index)
+            })
+            .map { index->CGFloat in
+                let maxOffset = -CGFloat(items.count - 1) * (itemWidth + itemSpacing)
+                let newOffset = -CGFloat(index) * (itemWidth + itemSpacing)
+                return min(max(maxOffset, newOffset),0)
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] offset in
+                self?.scrollOffset = offset
+            }
+            .store(in: &cancellables)
+    }
+    
+    private var cancellables = Set<AnyCancellable>()
+    
+    deinit {
+        for cancellable in cancellables {
+            cancellable.cancel()
+        }
     }
 }
